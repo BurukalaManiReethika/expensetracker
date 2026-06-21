@@ -1,0 +1,50 @@
+{% extends 'splitter/base.html' %}
+{% block content %}
+<h2>{{ group.name }}</h2>
+
+<div class="row mt-4">
+    <div class="col-md-5">
+        <h4>Members</h4>
+        <ul class="list-group mb-3">
+            {% for member in members %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ member.username }}
+                    {% if member.id != request.user.id and group.created_by == request.user %}
+                        <a href="{% url 'remove_member' group.id member.id %}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Remove this member?')">Remove</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+
+        {% if group.created_by == request.user %}
+        <h6>Add Member</h6>
+        <form method="post" action="{% url 'add_member' group.id %}" class="d-flex gap-2">
+            {% csrf_token %}
+            {{ add_member_form.username_or_email }}
+            <button type="submit" class="btn btn-sm btn-primary">Add</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div class="col-md-7">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4>Expenses</h4>
+            <a href="{% url 'add_expense' group.id %}" class="btn btn-success btn-sm">+ Add Expense</a>
+        </div>
+        <ul class="list-group mt-2">
+            {% for expense in expenses %}
+                <li class="list-group-item">
+                    <strong>{{ expense.description }}</strong> — ₹{{ expense.amount }}
+                    <br><small class="text-muted">paid by {{ expense.paid_by.username }} on {{ expense.created_at|date:"d M Y" }}</small>
+                </li>
+            {% empty %}
+                <li class="list-group-item text-muted">No expenses yet.</li>
+            {% endfor %}
+        </ul>
+
+        <a href="{% url 'view_balances' group.id %}" class="btn btn-outline-dark btn-sm mt-3">View Balances / Settle Up</a>
+    </div>
+</div>
+{% endblock %}
