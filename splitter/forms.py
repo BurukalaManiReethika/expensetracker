@@ -23,6 +23,28 @@ class AddMemberForm(forms.Form):
             'placeholder': 'Enter username or email'
         })
     )
+# Add these imports at top if not already there
+from django.contrib.auth.models import User
+from .models import ExpenseGroup, Expense
+
+# ... existing GroupCreateForm, AddMemberForm stay as-is ...
+
+class ExpenseForm(forms.ModelForm):
+    class Meta:
+        model = Expense
+        fields = ['description', 'amount', 'split_type']
+        widgets = {
+            'description': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. Dinner, Hotel, Cab'
+            }),
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Total amount',
+                'step': '0.01'
+            }),
+            'split_type': forms.Select(attrs={'class': 'form-select'}),
+        }
 
     def clean_username_or_email(self):
         value = self.cleaned_data['username_or_email']
