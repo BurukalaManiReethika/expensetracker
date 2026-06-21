@@ -1,0 +1,21 @@
+{% extends 'splitter/base.html' %}
+{% block content %}
+<h2>Balances — {{ group.name }}</h2>
+<p class="text-muted">Simplified settlement plan (minimum transactions needed)</p>
+
+{% if transactions %}
+    <ul class="list-group">
+        {% for t in transactions %}
+            <li class="list-group-item">
+                <strong>{{ t.from_user.username }}</strong> owes
+                <strong>{{ t.to_user.username }}</strong>
+                ₹{{ t.amount }}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="text-success">All settled up! 🎉</p>
+{% endif %}
+
+<a href="{% url 'group_detail' group.id %}" class="btn btn-secondary mt-3">Back to Group</a>
+{% endblock %}
