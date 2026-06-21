@@ -58,3 +58,15 @@ def calculate_splits(expense, split_type, members, custom_data=None):
         raise ValueError("Invalid split type")
 
     return splits
+    from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.dashboard, name='dashboard'),
+    path('group/create/', views.create_group, name='create_group'),
+    path('group/<int:group_id>/', views.group_detail, name='group_detail'),
+    path('group/<int:group_id>/add-member/', views.add_member, name='add_member'),
+    path('group/<int:group_id>/remove-member/<int:user_id>/', views.remove_member, name='remove_member'),
+    path('group/<int:group_id>/add-expense/', views.add_expense, name='add_expense'),
+    path('group/<int:group_id>/balances/', views.view_balances, name='view_balances'),
+]
