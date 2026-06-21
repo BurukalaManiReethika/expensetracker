@@ -18,4 +18,51 @@
 {% endif %}
 
 <a href="{% url 'group_detail' group.id %}" class="btn btn-secondary mt-3">Back to Group</a>
+{% extends 'splitter/base.html' %}
+{% block content %}
+<h2>Balances — {{ group.name }}</h2>
+<p class="text-muted">Simplified settlement plan (minimum transactions needed)</p>
+
+{% if transactions %}
+    <ul class="list-group">
+        {% for t in transactions %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>
+                    <strong>{{ t.from_user.username }}</strong> owes
+                    <strong>{{ t.to_user.username }}</strong>
+                    ₹{{ t.amount }}
+                </span>
+
+                {% if t.from_user.id == request.user.id %}
+                <form method="post" action="{% url 'settle_up' group.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="to_user_id" value="{{ t.to_user.id }}">
+                    <input type="hidden" name="amount" value="{{ t.amount }}">
+                    <button type="submit" class="btn btn-sm btn-success"
+                            onclick="return confirm('Mark ₹{{ t.amount }} as paid to {{ t.to_user.username }}?')">
+                        Settle Up
+                    </button>
+                </form>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="text-success">All settled up! 🎉</p>
+{% endif %}
+
+<h5 class="mt-4">Settlement History</h5>
+<ul class="list-group">
+    {% for s in group.settlements.all|dictsortreversed:"created_at" %}
+        <li class="list-group-item text-muted">
+            {{ s.paid_by.username }} paid {{ s.paid_to.username }} ₹{{ s.amount }}
+            on {{ s.created_at|date:"d M Y, h:i A" }}
+        </li>
+    {% empty %}
+        <li class="list-group-item text-muted">No settlements yet.</li>
+    {% endfor %}
+</ul>
+
+<a href="{% url 'group_detail' group.id %}" class="btn btn-secondary mt-3">Back to Group</a>
+{% endblock %}
 {% endblock %}
