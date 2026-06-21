@@ -19,7 +19,17 @@ def signup(request):
     else:
         form = SignUpForm()
     return render(request, 'splitter/signup.html', {'form': form})
-
+def signup(request):
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, f"Welcome, {user.username}! Your account was created.")
+            return redirect('dashboard')
+    else:
+        form = SignUpForm()
+    return render(request, 'splitter/signup.html', {'form': form})
 
 @login_required
 def dashboard(request):
