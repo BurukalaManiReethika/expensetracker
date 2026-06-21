@@ -47,4 +47,62 @@
         <a href="{% url 'view_balances' group.id %}" class="btn btn-outline-dark btn-sm mt-3">View Balances / Settle Up</a>
     </div>
 </div>
+<!-- ADD THIS BEFORE {% endblock %} in group_detail.html -->
+
+<div class="row mt-5">
+    <div class="col-md-6">
+        <h5>Contribution Split</h5>
+        <canvas id="contributionChart"></canvas>
+    </div>
+    <div class="col-md-6">
+        <h5>Net Balance (+ owed to you / - you owe)</h5>
+        <canvas id="balanceChart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    const contributionData = {{ contribution_data_json|safe }};
+    const balanceData = {{ balance_data_json|safe }};
+
+    // Pie Chart - Contributions
+    new Chart(document.getElementById('contributionChart'), {
+        type: 'pie',
+        data: {
+            labels: contributionData.map(d => d.name),
+            datasets: [{
+                data: contributionData.map(d => d.amount),
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Bar Chart - Net Balances
+    new Chart(document.getElementById('balanceChart'), {
+        type: 'bar',
+        data: {
+            labels: balanceData.map(d => d.name),
+            datasets: [{
+                label: 'Net Balance (₹)',
+                data: balanceData.map(d => d.balance),
+                backgroundColor: balanceData.map(d => d.balance >= 0 ? '#198754' : '#dc3545')
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+</script>
 {% endblock %}
