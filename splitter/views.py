@@ -3,6 +3,22 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import ExpenseGroup
 from .forms import GroupCreateForm, AddMemberForm
+# Add this import at top
+from .forms import SignUpForm
+from django.contrib.auth import login
+
+@login_required  # remove this decorator — signup must be accessible WITHOUT login
+def signup(request):
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)  # auto-login after signup
+            messages.success(request, f"Welcome, {user.username}! Your account was created.")
+            return redirect('dashboard')
+    else:
+        form = SignUpForm()
+    return render(request, 'splitter/signup.html', {'form': form})
 
 
 @login_required
