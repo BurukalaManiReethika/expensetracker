@@ -6,6 +6,41 @@ from .forms import GroupCreateForm, AddMemberForm
 # Add this import at top
 from .forms import SignUpForm
 from django.contrib.auth import login
+# Add this import at top
+from .models import Settlement
+
+@login_required
+def settle_up(request, group_id):
+    """
+    Records a settlement payment between two users.
+    Called from the balances page when a user clicks 'Settle Up' on a suggested transaction.
+    """
+    group = get_object_or_404(ExpenseGroup, id=group_id, members=request.user)
+
+    if request.method == 'POST':
+        to_user_id = request.POST.get('to_user_id')
+        amount = request.POST.get('amount')
+
+        try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            messages.error(request, "Invalid amount.")
+            return redirect('view_balances', group_id=group.id)
+
+        to_user = get_object_or_404(User, id=to_user_id, expense_groups=group)
+
+        # Only the person who OWES money can mark it as settled (paid_by = current user)
+        Settlement.objects.create(
+            group=group,
+            paid_by=request.user,
+            paid_to=to_user,
+            amount=amount
+        )
+
+        messages.success(request, f"Marked ₹{amount} as paid to {to_user.username}!")
+        return redirect('view_balances', group_id=group.id)
+
+    return redirect('view_balances', group_id=group.id)
 
 @login_required  # remove this decorator — signup must be accessible WITHOUT login
 def signup(request):
