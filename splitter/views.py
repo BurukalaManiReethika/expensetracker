@@ -34,6 +34,28 @@ def signup(request):
 from django.db.models import Sum
 import json
 from .utils import simplify_debts
+# Add this import
+from .tasks import send_balance_reminder
+
+@login_required
+def send_reminder(request, group_id, user_id):
+    """Manual trigger - lets group creator send a one-off reminder"""
+    group = get_object_or_404(ExpenseGroup, id=group_id, created_by=request.user)
+    from django.contrib.auth.models import User
+    from .utils import simplify_debts
+
+    target_user = get_object_or_404(User, id=user_id)
+    transactions = simplify_debts(group)
+
+    amount = next((t['amount'] for t in transactions if t['from_user'] == target_user.id), None)
+
+    if amount:
+        send_balance_reminder.delay(target_user.email, target_user.username, group.name, amount)
+        messages.success(request, f"Reminder sent to {target_user.username}!")
+    else:
+        messages.info(request, f"{target_user.username} has no pending balance.")
+
+    return redirect('group_detail', group_id=group.id)
 
 @login_required
 def group_detail(request, group_id):
