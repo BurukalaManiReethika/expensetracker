@@ -30,7 +30,45 @@ def signup(request):
     else:
         form = SignUpForm()
     return render(request, 'splitter/signup.html', {'form': form})
+# Add this import at top
+from django.db.models import Sum
+import json
+from .utils import simplify_debts
 
+@login_required
+def group_detail(request, group_id):
+    group = get_object_or_404(ExpenseGroup, id=group_id, members=request.user)
+    members = group.members.all()
+    expenses = group.expenses.all().order_by('-created_at')
+    add_member_form = AddMemberForm()
+
+    # --- Chart Data Prep ---
+    # 1. Contribution pie chart: total paid by each member
+    contribution_data = []
+    for member in members:
+        total_paid = expenses.filter(paid_by=member).aggregate(Sum('amount'))['amount__sum'] or 0
+        contribution_data.append({'name': member.username, 'amount': float(total_paid)})
+
+    # 2. Net balance bar chart: uses same logic as simplify_debts but raw balances
+    balances = {}
+    for member in members:
+        balances[member.username] = 0.0
+
+    for expense in expenses:
+        balances[expense.paid_by.username] += float(expense.amount)
+        for split in expense.splits.all():
+            balances[split.user.username] -= float(split.amount_owed)
+
+    balance_data = [{'name': k, 'balance': round(v, 2)} for k, v in balances.items()]
+
+    return render(request, 'splitter/group_detail.html', {
+        'group': group,
+        'members': members,
+        'expenses': expenses,
+        'add_member_form': add_member_form,
+        'contribution_data_json': json.dumps(contribution_data),
+        'balance_data_json': json.dumps(balance_data),
+    })
 @login_required
 def dashboard(request):
     user_groups = ExpenseGroup.objects.filter(members=request.user)
