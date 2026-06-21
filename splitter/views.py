@@ -57,7 +57,79 @@ def add_member(request, group_id):
             messages.error(request, "User not found.")
     return redirect('group_detail', group_id=group.id)
 
+# Add these imports at top
+from .models import Expense, ExpenseSplit
+from .forms import ExpenseForm
+from .utils import calculate_splits, simplify_debts
+import json
 
+
+@login_required
+def add_expense(request, group_id):
+    group = get_object_or_404(ExpenseGroup, id=group_id, members=request.user)
+    members = group.members.all()
+
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST)
+        if form.is_valid():
+            split_type = form.cleaned_data['split_type']
+            custom_data = {}
+
+            # Parse custom/percentage values from POST data
+            if split_type in ['PERCENTAGE', 'CUSTOM']:
+                for member in members:
+                    field_name = f'split_{member.id}'
+                    value = request.POST.get(field_name)
+                    if value:
+                        custom_data[member.id] = float(value)
+
+            expense = form.save(commit=False)
+            expense.group = group
+            expense.paid_by = request.user
+            expense.save()
+
+            try:
+                splits = calculate_splits(expense, split_type, members, custom_data)
+                for split in splits:
+                    ExpenseSplit.objects.create(
+                        expense=expense,
+                        user_id=split['user_id'],
+                        amount_owed=split['amount_owed']
+                    )
+                messages.success(request, "Expense added and split successfully!")
+                return redirect('group_detail', group_id=group.id)
+            except ValueError as e:
+                expense.delete()  # rollback if split calculation fails
+                messages.error(request, str(e))
+    else:
+        form = ExpenseForm()
+
+    return render(request, 'splitter/add_expense.html', {
+        'form': form,
+        'group': group,
+        'members': members,
+    })
+
+
+@login_required
+def view_balances(request, group_id):
+    group = get_object_or_404(ExpenseGroup, id=group_id, members=request.user)
+    transactions = simplify_debts(group)
+
+    # Attach actual User objects for display in template
+    from django.contrib.auth.models import User
+    enriched = []
+    for t in transactions:
+        enriched.append({
+            'from_user': User.objects.get(id=t['from_user']),
+            'to_user': User.objects.get(id=t['to_user']),
+            'amount': t['amount'],
+        })
+
+    return render(request, 'splitter/balances.html', {
+        'group': group,
+        'transactions': enriched,
+    })
 @login_required
 def remove_member(request, group_id, user_id):
     group = get_object_or_404(ExpenseGroup, id=group_id, created_by=request.user)
@@ -67,3 +139,4 @@ def remove_member(request, group_id, user_id):
         group.members.remove(user_id)
         messages.success(request, "Member removed.")
     return redirect('group_detail', group_id=group.id)
+
